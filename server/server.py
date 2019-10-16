@@ -1,5 +1,6 @@
 from imports import socket, select, constants, protocol
 
+
 def start_server(ip=constants.IP, port=constants.PORT):
     print("Starting server...")
     server = Server(ip, port)
@@ -41,4 +42,3 @@ class Server:
 
     def handle_message(self, request):
         pass
-
