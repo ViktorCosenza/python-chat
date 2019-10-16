@@ -6,7 +6,7 @@ AUTH_SUCCESS=201
 ERROR = 400
 AUTH_ERROR = 401
 
-SUCCESS_CODES = [SUCCESS]
+SUCCESS_CODES = [SUCCESS, AUTH_SUCCESS]
 ERROR_CODES = [ERROR, AUTH_ERROR]
 
 
@@ -17,10 +17,14 @@ def parse_json(payload):
 
 class ServerProtocol:
     @staticmethod
+    def encode(data):
+        return json.dumps(data).encode("utf-8")
+
+    @staticmethod
     def new_payload(payload, message, status):
-        return json.dumps(
-            {"status": status, "message": message, "payload": payload}
-        ).encode("utf-8")
+        return {
+            "payload":payload, "message":message, "status": status
+        }
 
     @staticmethod
     def success(payload=None, message="success", status=SUCCESS):

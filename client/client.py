@@ -34,8 +34,7 @@ def authenticate(sock):
             sock.send(command)
             raw_msg = sock.recv(constants.MAX_MSG_LEN)
             payload = parse_json(raw_msg)
-            if payload["status"] in protocol.ERROR_CODES:
-                print(payload)
+            print(payload)
         except AssertionError as e:
             print(e)
             continue
