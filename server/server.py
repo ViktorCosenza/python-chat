@@ -22,9 +22,10 @@ class Server:
         self.server_socket.bind((self.ip, self.port))
         self.server_socket.listen()
         self.listening = [self.server_socket]
-        self.clients = [{"username": None, "password": None, "socket": self.server_socket}]
+        self.clients = [
+            {"username": None, "password": None, "socket": self.server_socket}
+        ]
         self.registered_users = []
-
 
         self.request_types = [
             {
@@ -36,6 +37,11 @@ class Server:
                 "command": "/signup",
                 "params": ["username", "password"],
                 "action": self.handle_signup,
+            },
+            {
+                "command": "/msg",
+                "params": ["message"],
+                "action": self.handle_global_message,
             },
         ]
 
@@ -55,7 +61,9 @@ class Server:
 
     def handle_connect(self, connection):
         client_socket, address = connection.accept()
-        self.clients.append({"username":None, "password":None, "socket": client_socket})
+        self.clients.append(
+            {"username": None, "password": None, "socket": client_socket}
+        )
         self.update_listeners()
         self.respond(ServerProtocol.success(), client_socket)
 
@@ -77,7 +85,12 @@ class Server:
         if not payload["password"] == user["password"]:
             return (ServerProtocol.auth_error(message="Incorrect password"), None)
 
-        return (ServerProtocol.auth_success(message="User authenticated"), user)
+        return (
+            ServerProtocol.auth_success(
+                payload={"username": user["username"]}, message="User authenticated"
+            ),
+            user,
+        )
 
     def handle_signup(self, payload):
         if self.find_user(payload):
@@ -87,10 +100,27 @@ class Server:
 
         user = new_user(payload["username"], payload["password"])
         self.registered_users.append(user)
-        return (ServerProtocol.auth_success(message="Successfully created user"), user)
+        return (
+            ServerProtocol.auth_success(
+                payload={"username": user["username"]},
+                message="Successfully created user",
+            ),
+            user,
+        )
+
+    def handle_logout(self, connection):
+        return False
+
+    def handle_global_message(self, payload):
+        print(payload)
+
+    def handle_private_message(self, payload):
+        pass
 
     def handle_request(self, connection):
         request = self.apply_middleware(connection)
+        if not request:
+            return
         for request_type in self.request_types:
             if request["command"] == request_type["command"]:
                 (response, payload) = request_type["action"](request["payload"])
@@ -103,10 +133,12 @@ class Server:
         self.respond(response, connection)
 
     def respond(self, data, connection):
-        response = ServerProtocol.encode(data)
+        response = protocol.encode(data)
         connection.send(response)
 
-    def apply_middleware(self, request):
-        raw_message = request.recv(constants.MAX_MSG_LEN)
+    def apply_middleware(self, connection):
+        raw_message = connection.recv(constants.MAX_MSG_LEN)
+        if len(raw_message) == 0:
+            return self.handle_logout(connection)
         payload = parse_json(raw_message)
         return payload
