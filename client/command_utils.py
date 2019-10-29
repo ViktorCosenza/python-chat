@@ -9,7 +9,7 @@ def parse_auth(raw, expect):
             command, username, password = match.groups()
             break
     else:
-        raise AssertionError(f"Invalid input, Use one of {' '.join(expect)}")
+        raise AssertionError(f"Invalid input {raw}, Use one of {' '.join(expect)}")
     return ClientProtocol.new_payload(
         command, {"username": username, "password": password}
     )
