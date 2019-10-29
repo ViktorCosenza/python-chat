@@ -4,7 +4,7 @@ import io
 import sys
 import random
 from imports import socket, select, constants
-from .command_utils import parse_auth
+from .command_utils import parse_auth, parse_command, AUTH_COMMANDS, MSG_COMMANDS
 from .screen_helpers import *
 import protocol
 
@@ -40,13 +40,7 @@ def authenticate(sock, screen):
         raw_command = gather_input(screen["in"])
         refresh_all(screen)
         try:
-            command = parse_auth(
-                raw_command,
-                expect=[
-                    r"(/login) ([a-zA-Z]+) ([a-zA-Z]+)",
-                    r"(/signup) ([a-zA-Z]+) ([a-zA-Z]+)",
-                ],
-            )
+            command = parse_auth(raw_command)
         except AssertionError as e:
             screen["out"]["printer"](e)
             continue
@@ -76,13 +70,14 @@ def authenticate(sock, screen):
 
 def listen_server(sock, printer):
     while True:
-        printer(f"ABCDEFGHIJKLMNOP{random.randint(10, 25)}")
-        time.sleep(0.1)
+        message = sock.recv(constants.MAX_MSG_LEN)
+        printer(message["payload"])
 
 
 def wait_user_input(sock, screen, out_printer):
     while True:
         raw_command = gather_input(screen)
+        command = parse_command(raw_command)
         out_printer(raw_command)
 
 
