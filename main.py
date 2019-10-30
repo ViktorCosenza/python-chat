@@ -8,9 +8,10 @@ def main():
     parser.add_argument(
         "--server", help="Run server app or client", action="store_true"
     )
+    parser.add_argument("--verboose", action="store_true")
     args = parser.parse_args()
     if args.server:
-        start_server()
+        start_server(args.verboose)
     else:
         start_client()
 
