@@ -23,26 +23,26 @@ def encode(data):
 class ServerProtocol:
     @staticmethod
     def new_payload(payload, message, status):
-        return {"payload": payload, "message": message, "status": status}
+        return {"payload": {**payload, "by": "server"}, "message": message, "status": status}
 
     @staticmethod
-    def success(payload=None, message="success", status=SUCCESS):
+    def success(payload={}, message="success", status=SUCCESS):
         return ServerProtocol.new_payload(payload, message, status)
 
     @staticmethod
-    def message(payload=None, message="you got mail", status=SEND_MESSAGE):
+    def message(payload={}, message="you got mail", status=SEND_MESSAGE):
         return ServerProtocol.new_payload(payload, message, status)
 
     @staticmethod
-    def auth_success(payload=None, message="auth success", status=AUTH_SUCCESS):
+    def auth_success(payload={}, message="auth success", status=AUTH_SUCCESS):
         return ServerProtocol.new_payload(payload, message, status)
 
     @staticmethod
-    def error(payload=None, message="server error", status=ERROR):
+    def error(payload={}, message="server error", status=ERROR):
         return ServerProtocol.new_payload(payload, message, status)
 
     @staticmethod
-    def auth_error(payload=None, message="auth error", status=AUTH_ERROR):
+    def auth_error(payload={}, message="auth error", status=AUTH_ERROR):
         return ServerProtocol.new_payload(payload, message, status)
 
 

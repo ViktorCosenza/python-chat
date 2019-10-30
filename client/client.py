@@ -72,17 +72,20 @@ def authenticate(sock, screen):
 
 def handle_recieved_message(response, printer):
     payload = response["payload"]
-    if response and payload and payload["by"] != "user":
+    if not response or not payload or payload["by"] == "user":
+        printer(f"IGNORING REQUEST {payload}")
         return
 
     status = response["status"]
-    if status in protocol.SUCCESS_CODES:
-        printer(f"Response: {response}")
+    if status == protocol.SEND_MESSAGE:
+        printer(f"{payload['username']}: {payload['message']}")
+    elif status in protocol.SUCCESS_CODES:
+        pass
+        #printer(f"Response: {response}")
     elif status in protocol.ERROR_CODES:
-        printer("Error")
-        printer(response)
+        printer(f"Error: {response}")
     else:
-        raise AssertionError(f"Invalid response code {status}")
+        raise ValueError(f"Invalid response code {status}")
 
 
 def listen_server(sock, printer):
