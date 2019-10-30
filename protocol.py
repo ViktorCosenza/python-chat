@@ -1,4 +1,4 @@
-from imports import json
+import json
 
 SUCCESS = 200
 AUTH_SUCCESS = 201

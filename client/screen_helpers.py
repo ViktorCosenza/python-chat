@@ -2,7 +2,7 @@ import curses
 from curses.textpad import Textbox, rectangle
 
 
-def print_to_pab(screen, msg):
+def print_to_pad(screen, msg):
     screen["screen"].addstr(f"{msg}\n")
     screen["screen"].refresh(
         0, 0, 0, 0, screen["rows"], screen["cols"],
@@ -15,7 +15,7 @@ def print_to_screen(screen, msg):
 
 
 def setup_screen():
-    screen = curses.initscr()
+    curses.initscr()
     y_offset = int(curses.LINES * 0.9)
     y_input = curses.LINES - y_offset
 
@@ -28,7 +28,7 @@ def setup_screen():
             "screen": output_screen,
             "rows": y_offset,
             "cols": curses.COLS,
-            "printer": lambda s: print_to_pab(screens["out"], s),
+            "printer": lambda s: print_to_pad(screens["out"], s),
         },
         "in": {
             "screen": input_screen,
@@ -50,6 +50,4 @@ def refresh_all(screen):
     screen["out"]["screen"].refresh(
         0, 0, 0, 0, screen["out"]["rows"], screen["out"]["cols"]
     )
-
-    # screen["out"]["screen"].refresh()
     screen["in"]["screen"].refresh()

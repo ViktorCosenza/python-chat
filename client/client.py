@@ -1,20 +1,18 @@
+import socket
 import threading
-import time
-import io
-import sys
-import random
-from imports import socket, select, constants
-from .command_utils import parse_auth, parse_command, AUTH_COMMANDS, MSG_COMMANDS
-from .screen_helpers import *
+
+import constants
 import protocol
-
-
 from protocol import parse_json
+
+from .command_utils import AUTH_COMMANDS, MSG_COMMANDS, parse_auth, parse_command
+from .screen_helpers import gather_input, refresh_all, setup_screen
 
 
 def start_client():
     screen = setup_screen()
     client_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    client_socket.setblocking(True)
     try:
         client_socket.connect((constants.IP, constants.PORT))
     except ConnectionRefusedError:
@@ -24,10 +22,14 @@ def start_client():
         )
         return
 
-    raw_msg = client_socket.recv(4096)
+    raw_msg = client_socket.recv(constants.MAX_MSG_LEN)
     payload = parse_json(raw_msg)
     if payload["status"] == 200:
-        screen["out"]["printer"]("Connected to server!")
+        screen["out"]["printer"](
+            "Connected to server!\n"
+            + f"Server:{client_socket.getpeername()}\n"
+            + f"Server:{client_socket.getsockname()}"
+        )
     username = authenticate(client_socket, screen)
     main_loop(client_socket, username, screen)
 
@@ -45,7 +47,7 @@ def authenticate(sock, screen):
             screen["out"]["printer"](e)
             continue
 
-        sock.send(protocol.encode(command))
+        send_message(sock, command)
         raw_msg = sock.recv(constants.MAX_MSG_LEN)
         response = parse_json(raw_msg)
 
@@ -59,8 +61,7 @@ def authenticate(sock, screen):
         if command["command"] == "/signup":
             screen["out"]["printer"](
                 f"Successfully created user {username}"
-                "Login with /login <username> <password>",
-                sep="\n",
+                + "Login with /login <username> <password>"
             )
 
         elif command["command"] == "/login":
@@ -68,17 +69,38 @@ def authenticate(sock, screen):
             return username
 
 
+def handle_recieved_message(response, printer):
+    payload = response["payload"]
+    if response and payload and payload["by"] != "user":
+        return
+
+    status = response["status"]
+    if status in protocol.SUCCESS_CODES:
+        printer(f"Response: {response}")
+    elif status in protocol.ERROR_CODES:
+        printer("Error")
+        printer(response)
+    else:
+        raise AssertionError(f"Invalid response code {status}")
+
+
 def listen_server(sock, printer):
     while True:
-        message = sock.recv(constants.MAX_MSG_LEN)
-        printer(message["payload"])
+        raw_message = sock.recv(constants.MAX_MSG_LEN)
+        decoded_message = protocol.parse_json(raw_message)
+        handle_recieved_message(decoded_message, printer)
+
+
+def send_message(sock, command):
+    sock.send(protocol.encode(command))
 
 
 def wait_user_input(sock, screen, out_printer):
     while True:
         raw_command = gather_input(screen)
         command = parse_command(raw_command)
-        out_printer(raw_command)
+        if command:
+            send_message(sock, command)
 
 
 def main_loop(sock, username, screen):

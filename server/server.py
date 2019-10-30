@@ -1,10 +1,10 @@
-from imports import socket, select, constants, protocol
+import socket, select, constants, protocol
 from protocol import ServerProtocol, parse_json
 
 
-def start_server(ip=constants.IP, port=constants.PORT):
+def start_server(verboose=False, ip=constants.IP, port=constants.PORT):
     print("Starting server...")
-    server = Server(ip, port)
+    server = Server(ip, port, debug=verboose)
     print(f"Server started! Listening at {constants.IP}:{constants.PORT}...")
     server.listen()
 
@@ -14,7 +14,8 @@ def new_user(username, password, sockt=None):
 
 
 class Server:
-    def __init__(self, ip, port):
+    def __init__(self, ip, port, debug=False):
+        self.debug = debug
         self.ip = ip
         self.port = port
         self.server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -47,9 +48,7 @@ class Server:
 
     def listen(self):
         while True:
-            read_sockets, _, exception_sockets = select.select(
-                self.listening, [], self.listening
-            )
+            read_sockets, _, _ = select.select(self.listening, [], self.listening)
             for notified_socket in read_sockets:
                 if notified_socket == self.server_socket:
                     self.handle_connect(notified_socket)
@@ -60,7 +59,7 @@ class Server:
         self.listening = list(map(lambda client: client["socket"], self.clients))
 
     def handle_connect(self, connection):
-        client_socket, address = connection.accept()
+        client_socket, _ = connection.accept()
         self.clients.append(
             {"username": None, "password": None, "socket": client_socket}
         )
@@ -112,13 +111,17 @@ class Server:
         return False
 
     def handle_global_message(self, payload):
-        print(payload)
+        return (ServerProtocol.success(), None)
 
     def handle_private_message(self, payload):
-        pass
+        return (ServerProtocol.success(), None)
 
     def handle_request(self, connection):
         request = self.apply_middleware(connection)
+        if self.debug:
+            print("\nRecieved:")
+            print(request)
+
         if not request:
             return
         for request_type in self.request_types:
@@ -133,6 +136,9 @@ class Server:
         self.respond(response, connection)
 
     def respond(self, data, connection):
+        if self.debug:
+            print("\nResponding:")
+            print(data)
         response = protocol.encode(data)
         connection.send(response)
 
