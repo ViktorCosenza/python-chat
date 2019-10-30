@@ -2,6 +2,8 @@ import json
 
 SUCCESS = 200
 AUTH_SUCCESS = 201
+SEND_MESSAGE = 303
+
 
 ERROR = 400
 AUTH_ERROR = 401
@@ -25,6 +27,10 @@ class ServerProtocol:
 
     @staticmethod
     def success(payload=None, message="success", status=SUCCESS):
+        return ServerProtocol.new_payload(payload, message, status)
+
+    @staticmethod
+    def message(payload=None, message="you got mail", status=SEND_MESSAGE):
         return ServerProtocol.new_payload(payload, message, status)
 
     @staticmethod

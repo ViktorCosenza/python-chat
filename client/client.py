@@ -46,6 +46,7 @@ def authenticate(sock, screen):
         except AssertionError as e:
             screen["out"]["printer"](e)
             continue
+        screen["out"]["printer"](command)
 
         send_message(sock, command)
         raw_msg = sock.recv(constants.MAX_MSG_LEN)
@@ -89,7 +90,6 @@ def listen_server(sock, printer):
         raw_message = sock.recv(constants.MAX_MSG_LEN)
         decoded_message = protocol.parse_json(raw_message)
         handle_recieved_message(decoded_message, printer)
-
 
 def send_message(sock, command):
     sock.send(protocol.encode(command))
