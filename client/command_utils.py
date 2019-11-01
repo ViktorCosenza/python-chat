@@ -2,7 +2,7 @@ import re, json
 from protocol import ClientProtocol
 
 
-MSG_COMMANDS = [r"(/msg) ([a-zA-Z]+)"]
+MSG_COMMANDS = [r"(/msg) (.+)"]
 
 AUTH_COMMANDS = [
     r"(/login) ([a-zA-Z]+) ([a-zA-Z]+)",

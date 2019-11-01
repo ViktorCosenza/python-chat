@@ -20,7 +20,7 @@ class Server:
         self.port = port
         self.server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self.server_socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-        self.server_socket.bind((self.ip, self.port))
+        self.server_socket.bind((socket.gethostbyname('0.0.0.0'), self.port))
         self.server_socket.listen()
         self.listening = [self.server_socket]
         self.clients = [
