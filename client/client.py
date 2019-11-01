@@ -1,11 +1,15 @@
+import json
+import os
 import socket
 import threading
+import time
 
 import constants
 import protocol
 from protocol import parse_json
 
-from .command_utils import AUTH_COMMANDS, MSG_COMMANDS, parse_auth, parse_command
+from .command_utils import (AUTH_COMMANDS, MSG_COMMANDS, parse_auth,
+                            parse_command)
 from .screen_helpers import gather_input, refresh_all, setup_screen
 
 
@@ -91,8 +95,14 @@ def handle_recieved_message(response, printer):
 def listen_server(sock, printer):
     while True:
         raw_message = sock.recv(constants.MAX_MSG_LEN)
-        decoded_message = protocol.parse_json(raw_message)
-        handle_recieved_message(decoded_message, printer)
+        try:
+            decoded_message = protocol.parse_json(raw_message)
+            handle_recieved_message(decoded_message, printer)
+        except json.decoder.JSONDecodeError:
+            printer('Server is offline... Shutting down application')
+            time.sleep(2)
+            os._exit(1)
+
 
 def send_message(sock, command):
     sock.send(protocol.encode(command))
@@ -101,10 +111,12 @@ def send_message(sock, command):
 def wait_user_input(sock, screen, out_printer):
     while True:
         raw_command = gather_input(screen)
-        command = parse_command(raw_command)
-        if command:
+        try:
+            command = parse_command(raw_command)
             send_message(sock, command)
-
+        except AssertionError as e:
+            out_printer(e)
+        
 
 def main_loop(sock, username, screen):
     global has_quited

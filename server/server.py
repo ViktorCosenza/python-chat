@@ -44,6 +44,11 @@ class Server:
                 "params": ["message"],
                 "action": self.handle_global_message,
             },
+            {
+                "command": "/private",
+                "params": ["message", "dest"],
+                "action": self.handle_private_message,
+            }
         ]
 
     def listen(self):
@@ -124,6 +129,10 @@ class Server:
 
     def handle_logout(self, connection):
         return False
+
+    def handle_private_message(self, payload):
+        print(payload)
+        return ServerProtocol.success()
 
     def handle_global_message(self, payload):
         for client in self.clients:
