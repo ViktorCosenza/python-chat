@@ -51,3 +51,6 @@ def refresh_all(screen):
         0, 0, 0, 0, screen["out"]["rows"], screen["out"]["cols"]
     )
     screen["in"]["screen"].refresh()
+
+def quit_screen():
+    curses.endwin()

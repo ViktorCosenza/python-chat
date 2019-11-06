@@ -10,13 +10,14 @@ from protocol import parse_json
 
 from .command_utils import (AUTH_COMMANDS, MSG_COMMANDS, parse_auth,
                             parse_command)
-from .screen_helpers import gather_input, refresh_all, setup_screen
+from .screen_helpers import gather_input, refresh_all, setup_screen, quit_screen
 
+has_quited = False
 
 def start_client():
+    global has_quited
     screen = setup_screen()
     client_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    client_socket.setblocking(True)
     try:
         client_socket.connect((constants.IP, constants.PORT))
     except ConnectionRefusedError:
@@ -35,7 +36,8 @@ def start_client():
             + f"Server:{client_socket.getsockname()}"
         )
     username = authenticate(client_socket, screen)
-    main_loop(client_socket, username, screen)
+    if username:
+        main_loop(client_socket, username, screen)
 
 
 def authenticate(sock, screen):
@@ -52,6 +54,11 @@ def authenticate(sock, screen):
             continue
         screen["out"]["printer"](command)
 
+        if command["command"] == "/exit":
+            screen["out"]["printer"](f"EXIT")
+            quit_screen()
+            return None
+
         send_message(sock, command)
         raw_msg = sock.recv(constants.MAX_MSG_LEN)
         response = parse_json(raw_msg)
@@ -61,7 +68,7 @@ def authenticate(sock, screen):
             error_msg = response["message"]
             screen["out"]["printer"](f"Error {error_code}: {error_msg}")
             continue
-
+                
         username = response["payload"]["username"]
         if command["command"] == "/signup":
             screen["out"]["printer"](
@@ -72,6 +79,8 @@ def authenticate(sock, screen):
         elif command["command"] == "/login":
             screen["out"]["printer"](f"Welcome {username}!")
             return username
+        
+
 
 
 def handle_recieved_message(response, printer):
@@ -93,29 +102,34 @@ def handle_recieved_message(response, printer):
 
 
 def listen_server(sock, printer):
-    while True:
+    global has_quited
+    while not has_quited:
         raw_message = sock.recv(constants.MAX_MSG_LEN)
         try:
             decoded_message = protocol.parse_json(raw_message)
             handle_recieved_message(decoded_message, printer)
         except json.decoder.JSONDecodeError:
             printer('Server is offline... Shutting down application')
-            time.sleep(2)
-            os._exit(1)
+            time.sleep(1)
 
 
 def send_message(sock, command):
     sock.send(protocol.encode(command))
 
-
 def wait_user_input(sock, screen, out_printer):
+    global has_quited
     while True:
         raw_command = gather_input(screen)
         try:
             command = parse_command(raw_command)
+            if command["command"] == "/exit":
+                break
             send_message(sock, command)
         except AssertionError as e:
-            out_printer(e)
+                out_printer(e)
+    has_quited = True
+    quit_screen()
+    os._exit(0)
         
 
 def main_loop(sock, username, screen):
