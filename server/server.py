@@ -20,7 +20,7 @@ class Server:
         self.port = port
         self.server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self.server_socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-        self.server_socket.bind((self.ip, self.port))
+        self.server_socket.bind((socket.gethostbyname("0.0.0.0"), self.port))
         self.server_socket.listen()
         self.listening = [self.server_socket]
         self.clients = [
@@ -43,6 +43,11 @@ class Server:
                 "command": "/msg",
                 "params": ["message"],
                 "action": self.handle_global_message,
+            },
+            {
+                "command": "/private",
+                "params": ["message", "dest"],
+                "action": self.handle_private_message,
             },
         ]
 
@@ -88,7 +93,6 @@ class Server:
 
         if only_authenticated:
             assert len(user) < 2, "Two users Share same username!!"
-
         user = user[0] if user else None
         return user
 
@@ -123,20 +127,38 @@ class Server:
         )
 
     def handle_logout(self, connection):
+        user = self.find_user({"socket": connection}, by="socket", where=self.clients)
+        if user:
+            self.clients.remove(user)
         return False
+
+    def handle_private_message(self, payload):
+        dest, message = payload["message"].split(":")
+        dest = self.find_user(
+            {"username": dest}, only_authenticated=True, where=self.clients
+        )
+        print(f"Private message dest: {dest['username']}")
+        self.respond(
+            ServerProtocol.message(
+                {"username": f"private-{dest['username']}", "message": message}
+            ),
+            dest["socket"]
+        )
+        return (ServerProtocol.success(), None)
 
     def handle_global_message(self, payload):
         for client in self.clients:
-            try: client['socket'].getpeername()
-            except: continue
-            self.respond(ServerProtocol.message({
-                "username": payload["username"],
-                "message": payload["message"]
-            }), client["socket"])
+            try:
+                client["socket"].getpeername()
+            except:
+                continue
+            self.respond(
+                ServerProtocol.message(
+                    {"username": payload["username"], "message": payload["message"]}
+                ),
+                client["socket"],
+            )
 
-        return (ServerProtocol.success(), None)
-
-    def handle_private_message(self, payload):
         return (ServerProtocol.success(), None)
 
     def handle_request(self, connection):

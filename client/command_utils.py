@@ -2,11 +2,16 @@ import re, json
 from protocol import ClientProtocol
 
 
-MSG_COMMANDS = [r"(/msg) ([a-zA-Z]+)"]
+MSG_COMMANDS = [
+    r"(/msg) (.+)", 
+    r"(/private) (.+:.+)",
+    r"(/exit)"
+]
 
 AUTH_COMMANDS = [
     r"(/login) ([a-zA-Z]+) ([a-zA-Z]+)",
     r"(/signup) ([a-zA-Z]+) ([a-zA-Z]+)",
+    r"(/exit)"
 ]
 
 
@@ -20,12 +25,18 @@ def parse(raw, expect):
 
 
 def parse_command(raw, expect=MSG_COMMANDS):
-    [command, msg] = parse(raw, expect=MSG_COMMANDS)
-    return ClientProtocol.new_payload(command, {"message": msg, "by": "user"})
+    command, *message = parse(raw, expect)
+
+    payload = ClientProtocol.new_payload(command, {"message": message[0] if message else None, "by": "user"})
+    return payload
 
 
 def parse_auth(raw, expect=AUTH_COMMANDS):
-    command, username, password = parse(raw, expect)
+    command, *rest = parse(raw, expect)
+    if len(rest) == 0:
+        username = password = None
+    else: 
+        username, password = rest
     return ClientProtocol.new_payload(
         command, {"username": username, "password": password}
     )
